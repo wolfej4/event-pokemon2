@@ -8,7 +8,6 @@
   };
   let currentFilter = { cat: "all", q: "", type: "all" };
 
-  const grid = document.getElementById("grid");
   const featuredSection = document.getElementById("featured-section");
   const featuredGrid = document.getElementById("featured-grid");
   const resultCount = document.getElementById("result-count");
@@ -26,29 +25,18 @@
   const quoteModal = document.getElementById("quote-modal");
   const offlineBanner = document.getElementById("offline-banner");
   const kioskToast = document.getElementById("kiosk-toast");
-  const tileSizeRow = document.getElementById("tile-size-row");
+  const bookViewport = document.getElementById("book-viewport");
+  const bookStage = document.getElementById("book-stage");
+  const bookPageTop = document.getElementById("book-page-top");
+  const bookPageBottom = document.getElementById("book-page-bottom");
+  const bookPrevBtn = document.getElementById("book-prev-btn");
+  const bookNextBtn = document.getElementById("book-next-btn");
+  const bookPageIndicator = document.getElementById("book-page-indicator");
 
   const DESIGNS_CACHE_KEY = "catalogDesignsCache";
   const SETTINGS_CACHE_KEY = "catalogSettingsCache";
   const PENDING_QUOTES_KEY = "pendingQuoteRequests";
-  const TILE_SIZE_KEY = "catalogTileSize";
-
-  // ---- tile size (large/medium/small tiles on phone widths) ----
-  function applyTileSize(size){
-    document.body.dataset.tileSize = size;
-    tileSizeRow.querySelectorAll(".tile-size-btn").forEach(btn => {
-      btn.classList.toggle("active", btn.dataset.size === size);
-    });
-    try{ localStorage.setItem(TILE_SIZE_KEY, size); }catch(e){}
-  }
-  tileSizeRow.addEventListener("click", (e) => {
-    const btn = e.target.closest(".tile-size-btn");
-    if(!btn) return;
-    applyTileSize(btn.dataset.size);
-  });
-  let savedTileSize = "small";
-  try{ savedTileSize = localStorage.getItem(TILE_SIZE_KEY) || "small"; }catch(e){}
-  applyTileSize(savedTileSize);
+  const BOOK_PAGE_SIZE = 4;
 
   // ---- quote cart (slugs the customer wants a quote for) ----
   let cart = [];
@@ -244,11 +232,105 @@
       featuredSection.style.display = "none";
     }
 
-    grid.innerHTML = "";
-    const frag = document.createDocumentFragment();
-    for(const d of list) frag.appendChild(buildCard(d, list));
-    grid.appendChild(frag);
+    bookList = list;
+    bookPages = [];
+    for(let i = 0; i < list.length; i += BOOK_PAGE_SIZE) bookPages.push(list.slice(i, i + BOOK_PAGE_SIZE));
+    showBookPage(0, 0);
   }
+
+  // ---- the "book": paginates the current results 4-per-page, with a real page-turn animation ----
+  let bookList = [];
+  let bookPages = [];
+  let bookIndex = 0;
+  let bookAnimating = false;
+
+  function fillBookPage(container, pageIndex){
+    container.innerHTML = "";
+    const items = bookPages[pageIndex] || [];
+    const frag = document.createDocumentFragment();
+    for(const d of items) frag.appendChild(buildCard(d, bookList));
+    container.appendChild(frag);
+  }
+
+  function updateBookNav(){
+    const total = bookPages.length;
+    bookPageIndicator.textContent = total ? ("Page " + (bookIndex + 1) + " of " + total) : "";
+    bookPrevBtn.disabled = bookIndex <= 0;
+    bookNextBtn.disabled = total === 0 || bookIndex >= total - 1;
+  }
+
+  function showBookPage(index, dir){
+    const total = bookPages.length;
+    if(total === 0){
+      bookViewport.style.display = "none";
+      bookPageIndicator.textContent = "";
+      bookPageTop.innerHTML = "";
+      bookPageBottom.innerHTML = "";
+      bookIndex = 0;
+      return;
+    }
+    bookViewport.style.display = "flex";
+    index = Math.max(0, Math.min(index, total - 1));
+
+    if(!dir){
+      bookIndex = index;
+      fillBookPage(bookPageTop, index);
+      bookPageBottom.innerHTML = "";
+      updateBookNav();
+      return;
+    }
+
+    bookAnimating = true;
+    fillBookPage(bookPageBottom, index);
+    bookPageTop.classList.remove("flip-next", "flip-prev");
+    void bookPageTop.offsetWidth; // restart animation
+    bookPageTop.classList.add(dir > 0 ? "flip-next" : "flip-prev");
+
+    const onEnd = () => {
+      bookPageTop.removeEventListener("animationend", onEnd);
+      bookPageTop.classList.remove("flip-next", "flip-prev");
+      bookIndex = index;
+      fillBookPage(bookPageTop, index);
+      bookAnimating = false;
+      updateBookNav();
+    };
+    bookPageTop.addEventListener("animationend", onEnd);
+  }
+
+  function gotoBookPage(newIndex, dir){
+    if(bookAnimating) return;
+    if(newIndex < 0 || newIndex >= bookPages.length) return;
+    showBookPage(newIndex, dir);
+  }
+
+  bookPrevBtn.addEventListener("click", () => gotoBookPage(bookIndex - 1, -1));
+  bookNextBtn.addEventListener("click", () => gotoBookPage(bookIndex + 1, 1));
+
+  document.addEventListener("keydown", (e) => {
+    if(modalBackdrop.classList.contains("show")) return;
+    const tag = document.activeElement && document.activeElement.tagName;
+    if(tag === "INPUT" || tag === "TEXTAREA") return;
+    if(e.key === "ArrowRight") gotoBookPage(bookIndex + 1, 1);
+    else if(e.key === "ArrowLeft") gotoBookPage(bookIndex - 1, -1);
+  });
+
+  // touch swipe on the book itself: left = next page, right = previous page
+  let bookTouchStartX = null, bookTouchStartY = null;
+  bookStage.addEventListener("touchstart", (e) => {
+    const t = e.changedTouches[0];
+    bookTouchStartX = t.clientX; bookTouchStartY = t.clientY;
+  }, { passive: true });
+  bookStage.addEventListener("touchend", (e) => {
+    if(bookTouchStartX == null) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - bookTouchStartX;
+    const dy = t.clientY - bookTouchStartY;
+    bookTouchStartX = null; bookTouchStartY = null;
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      if(dx < 0) gotoBookPage(bookIndex + 1, 1);
+      else gotoBookPage(bookIndex - 1, -1);
+    }
+  }, { passive: true });
 
   function buildCard(d, list){
     const card = document.createElement("div");

@@ -60,12 +60,6 @@ header.hero p{ color:var(--text-muted); margin:0; font-size:0.95rem; }
 main{ max-width:1100px; margin:0 auto; padding:16px; }
 #result-bar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
 #result-count{ font-size:0.8rem; color:var(--text-faint); }
-#tile-size-row{ display:none; gap:6px; }
-.tile-size-btn{
-  width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:var(--surface);
-  color:var(--text-muted); font-size:0.72rem; font-weight:650; cursor:pointer;
-}
-.tile-size-btn.active{ background:var(--teal-dim); border-color:var(--teal); color:var(--text); }
 #empty-state{ text-align:center; padding:60px 20px; color:var(--text-muted); display:none; }
 #empty-state.show{ display:block; }
 
@@ -97,11 +91,10 @@ main{ max-width:1100px; margin:0 auto; padding:16px; }
 
 @media (max-width:520px){
   main{ padding:10px; }
-  #tile-size-row{ display:flex; }
   .card{ border-radius:9px; }
 
-  /* small (default): 3 across, everything scaled down to fit */
-  #grid, .grid{ grid-template-columns: repeat(3, 1fr); gap:8px; }
+  /* featured strip still scrolls continuously, so keep it dense on phones */
+  .grid{ grid-template-columns: repeat(3, 1fr); gap:8px; }
   .badge{ top:4px; right:4px; font-size:0.52rem; padding:1px 5px; }
   .sprite-badge{ bottom:4px; right:4px; width:22px; height:22px; border-radius:6px; padding:2px; }
   .quote-toggle{ top:4px; left:4px; width:20px; height:20px; font-size:0.72rem; }
@@ -109,30 +102,54 @@ main{ max-width:1100px; margin:0 auto; padding:16px; }
   .card-title{ font-size:0.68rem; line-height:1.2; margin-bottom:4px; }
   .card-price{ font-size:0.68rem; }
   .card-price.unset{ font-size:0.58rem; }
+}
 
-  /* medium: 2 across */
-  body[data-tile-size="medium"] #grid, body[data-tile-size="medium"] .grid{
-    grid-template-columns: repeat(2, 1fr); gap:12px;
-  }
-  body[data-tile-size="medium"] .badge{ top:6px; right:6px; font-size:0.58rem; padding:2px 6px; }
-  body[data-tile-size="medium"] .sprite-badge{ bottom:6px; right:6px; width:28px; height:28px; }
-  body[data-tile-size="medium"] .quote-toggle{ top:6px; left:6px; width:24px; height:24px; font-size:0.82rem; }
-  body[data-tile-size="medium"] .card-body{ padding:8px 9px 10px; }
-  body[data-tile-size="medium"] .card-title{ font-size:0.78rem; line-height:1.25; margin-bottom:5px; }
-  body[data-tile-size="medium"] .card-price{ font-size:0.78rem; }
-  body[data-tile-size="medium"] .card-price.unset{ font-size:0.66rem; }
-
-  /* large: 1 across, full size */
-  body[data-tile-size="large"] #grid, body[data-tile-size="large"] .grid{
-    grid-template-columns: 1fr; gap:14px;
-  }
-  body[data-tile-size="large"] .badge{ top:7px; right:7px; font-size:0.62rem; padding:2px 7px; }
-  body[data-tile-size="large"] .sprite-badge{ bottom:7px; right:7px; width:36px; height:36px; }
-  body[data-tile-size="large"] .quote-toggle{ top:7px; left:7px; width:28px; height:28px; font-size:0.95rem; }
-  body[data-tile-size="large"] .card-body{ padding:10px 11px 12px; }
-  body[data-tile-size="large"] .card-title{ font-size:0.88rem; line-height:1.25; margin-bottom:6px; }
-  body[data-tile-size="large"] .card-price{ font-size:0.86rem; }
-  body[data-tile-size="large"] .card-price.unset{ font-size:0.72rem; }
+/* the "book": 4 designs per page, flipped like a real page turn on swipe/arrow */
+#book-viewport{ display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+.book-nav-btn{
+  flex:none; width:34px; height:34px; border-radius:50%; border:1px solid var(--border);
+  background:var(--surface); color:var(--text); font-size:1.2rem; line-height:1; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.book-nav-btn:disabled{ opacity:0.25; cursor:default; }
+#book-stage{
+  flex:1; min-width:0; position:relative; display:grid;
+  perspective:1800px; -webkit-perspective:1800px;
+}
+.book-page{
+  grid-area:1/1; position:relative; align-content:start;
+  background:var(--bg);
+  backface-visibility:hidden; -webkit-backface-visibility:hidden;
+  transform-style:preserve-3d; -webkit-transform-style:preserve-3d;
+}
+.book-page-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
+@media (min-width:640px){
+  .book-page-grid{ grid-template-columns:repeat(4, 1fr); gap:14px; }
+}
+#book-page-bottom{ z-index:1; }
+#book-page-top{ z-index:2; }
+#book-page-top::after{
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:0;
+}
+.book-page.flip-next{
+  animation: flipNext .5s cubic-bezier(.45,.05,.35,1) forwards; transform-origin:left center;
+}
+.book-page.flip-prev{
+  animation: flipPrev .5s cubic-bezier(.45,.05,.35,1) forwards; transform-origin:right center;
+}
+.book-page.flip-next::after{
+  background:linear-gradient(90deg, rgba(0,0,0,0.45), rgba(0,0,0,0) 65%);
+  animation: flipShadow .5s cubic-bezier(.45,.05,.35,1) forwards;
+}
+.book-page.flip-prev::after{
+  background:linear-gradient(270deg, rgba(0,0,0,0.45), rgba(0,0,0,0) 65%);
+  animation: flipShadow .5s cubic-bezier(.45,.05,.35,1) forwards;
+}
+@keyframes flipNext{ from{ transform:rotateY(0deg); } to{ transform:rotateY(-180deg); } }
+@keyframes flipPrev{ from{ transform:rotateY(0deg); } to{ transform:rotateY(180deg); } }
+@keyframes flipShadow{ 0%{ opacity:0; } 45%{ opacity:1; } 100%{ opacity:0; } }
+#book-page-indicator{
+  text-align:center; font-family:var(--mono); font-size:0.75rem; color:var(--text-faint); margin-bottom:18px;
 }
 
 /* modal */
