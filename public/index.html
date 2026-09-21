@@ -40,18 +40,21 @@
 <main>
   <div id="result-bar">
     <div id="result-count"></div>
-    <div id="tile-size-row" role="group" aria-label="Tile size">
-      <button class="tile-size-btn" data-size="large" title="Large tiles — 1 across" aria-label="Large tiles">L</button>
-      <button class="tile-size-btn" data-size="medium" title="Medium tiles — 2 across" aria-label="Medium tiles">M</button>
-      <button class="tile-size-btn active" data-size="small" title="Small tiles — 3 across" aria-label="Small tiles">S</button>
-    </div>
   </div>
   <div id="featured-section" style="display:none;">
     <div class="section-heading">Featured</div>
     <div id="featured-grid" class="grid"></div>
     <div class="section-heading">All designs</div>
   </div>
-  <div id="grid" class="grid"></div>
+  <div id="book-viewport">
+    <button class="book-nav-btn" id="book-prev-btn" aria-label="Previous page">‹</button>
+    <div id="book-stage">
+      <div id="book-page-bottom" class="book-page book-page-grid"></div>
+      <div id="book-page-top" class="book-page book-page-grid"></div>
+    </div>
+    <button class="book-nav-btn" id="book-next-btn" aria-label="Next page">›</button>
+  </div>
+  <div id="book-page-indicator"></div>
   <div id="empty-state">
     <div>Nothing matches that search or filter.</div>
   </div>
