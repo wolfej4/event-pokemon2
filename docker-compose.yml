@@ -4,10 +4,10 @@ services:
     # If you'd rather Portainer pull a prebuilt image instead of building on
     # the host, push this to your own registry and swap `build: .` for
     # `image: yourregistry/n3d-catalog:latest`.
-    container_name: n3d-catalog
+    container_name: n3d-catalog2
     restart: unless-stopped
     ports:
-      - "8090:3000"
+      - "8091:3000"
     environment:
       PORT: "3000"
       N3D_API_KEY: ${N3D_API_KEY}
